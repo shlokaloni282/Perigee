@@ -111,6 +111,3 @@ The telemetry dataset simulates 30 days of hourly satellite readings (720 rows) 
 - Real-time simulated data streaming via WebSockets
 - Deployment (Render/Railway for backend, Vercel for frontend)
 
-## Author
-
-Shloka Loni — Final-year BTech ECS student, Shah and Anchor Kutchhi Engineering College, University of Mumbai

@@ -1,0 +1,17 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+db.sqlite3
+
+# Node / React
+node_modules/
+dist/
+.env
+
+# ML artifacts (optional - keep if small, ignore if large)
+*.joblib
+
+# Editor
+.vscode/

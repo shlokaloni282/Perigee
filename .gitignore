@@ -15,3 +15,5 @@ dist/
 
 # Editor
 .vscode/
+.env
+agent/cache/

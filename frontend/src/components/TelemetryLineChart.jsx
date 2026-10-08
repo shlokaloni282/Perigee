@@ -32,7 +32,7 @@ export default function TelemetryLineChart({ data }) {
           <CartesianGrid strokeDasharray="3 3" stroke="#333" />
           <XAxis dataKey="timestamp" hide />
           <YAxis stroke="#aaa" />
-          <Tooltip />
+          <Tooltip formatter={(v) => Number(v).toFixed(1)} />
           <Legend />
           <Line
             type="monotone"

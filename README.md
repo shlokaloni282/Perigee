@@ -22,12 +22,12 @@ Satellites continuously stream telemetry — temperature, battery level, power d
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
+| Layer     | Technology                                              |
+| --------- | ------------------------------------------------------- |
 | ML / Data | Python, Pandas, scikit-learn (Isolation Forest), joblib |
-| Backend | Django, Django REST Framework, SQLite |
-| Frontend | React (Vite), Recharts, Axios |
-| Tooling | Git, VS Code |
+| Backend   | Django, Django REST Framework, SQLite                   |
+| Frontend  | React (Vite), Recharts, Axios                           |
+| Tooling   | Git, VS Code                                            |
 
 ## Architecture
 
@@ -61,19 +61,21 @@ frontend/
 
 ## API Endpoints
 
-| Endpoint | Description |
-|---|---|
-| `GET /api/telemetry/` | All telemetry readings |
-| `GET /api/telemetry/anomalies/` | Only readings flagged as anomalies by the model |
-| `GET /api/telemetry/stats/` | Summary stats: total readings, anomaly count, anomaly rate |
+| Endpoint                        | Description                                                |
+| ------------------------------- | ---------------------------------------------------------- |
+| `GET /api/telemetry/`           | All telemetry readings                                     |
+| `GET /api/telemetry/anomalies/` | Only readings flagged as anomalies by the model            |
+| `GET /api/telemetry/stats/`     | Summary stats: total readings, anomaly count, anomaly rate |
 
 ## Getting Started
 
 ### Prerequisites
+
 - Python 3.11+
 - Node.js 18+
 
 ### Backend setup
+
 ```bash
 cd backend
 python -m venv .venv
@@ -84,14 +86,17 @@ python manage.py migrate
 python manage.py load_telemetry   # loads CSV data + runs anomaly detection
 python manage.py runserver
 ```
+
 Backend runs at `http://127.0.0.1:8000`.
 
 ### Frontend setup
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+
 Frontend runs at `http://localhost:5173`.
 
 > Make sure the backend is running before starting the frontend — the dashboard fetches live data from the Django API on load.
@@ -110,4 +115,3 @@ The telemetry dataset simulates 30 days of hourly satellite readings (720 rows) 
 - Time-series forecasting of upcoming telemetry values
 - Real-time simulated data streaming via WebSockets
 - Deployment (Render/Railway for backend, Vercel for frontend)
-

@@ -11,7 +11,7 @@ dist/
 .env
 
 # ML artifacts (optional - keep if small, ignore if large)
-*.joblib
+# *.joblib
 
 # Editor
 .vscode/

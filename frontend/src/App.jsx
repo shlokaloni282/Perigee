@@ -33,7 +33,7 @@ function App() {
         fontFamily: "sans-serif",
       }}
     >
-      <h1 style={{ color: "#fff" }}>SatGuard — Satellite Health Dashboard</h1>
+      <h1 style={{ color: "#fff" }}>Perigee — Satellite Health Dashboard</h1>
       <StatsCards stats={stats} />
       <TelemetryLineChart data={telemetry} />
       <AnomalyBarChart anomalies={anomalies} />

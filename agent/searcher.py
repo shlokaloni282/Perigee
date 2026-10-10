@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 from urllib.parse import urlparse
+import re
 
 import serpapi
 from dotenv import load_dotenv
@@ -45,6 +46,15 @@ NOISE = (
     "reddit.com", "tiktok.com", "x.com", "twitter.com",
 )
 RANK = {"official": 0, "research": 1, "news/other": 2}
+SPACE_RE = re.compile(
+    r"\b(satellite|spacecraft|space|orbit|orbital|telemetry|nasa|esa|isro|cubesat|smallsat|aerospace)\b",
+    re.I,
+)
+
+
+def _on_topic(item) -> bool:
+    text = f"{item.get('title') or ''} {item.get('snippet') or ''} {item.get('link') or ''}"
+    return bool(SPACE_RE.search(text))
 
 
 def queries_for(anomaly_type: str):
@@ -105,7 +115,7 @@ def gather(anomaly_type: str, limit: int = 5):
     seen, out = set(), []
     for q in queries:
         for item in search(q, limit=limit):
-            if item["link"] in seen or _is_noise(item["link"]):
+            if item["link"] in seen or _is_noise(item["link"]) or not _on_topic(item):
                 continue
             seen.add(item["link"])
             out.append(item)

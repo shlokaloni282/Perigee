@@ -50,7 +50,7 @@ Perigee has two parts that work together.
   - Live stats cards (total readings, anomaly count, anomaly rate)
   - Multi-metric telemetry trend line chart
   - Anomaly breakdown by type (bar chart)
-  - A table of the most recent flagged anomalies
+  - A table of the most recent flagged anomalies with an **Explain** action that displays an AI-generated briefing, possible causes, and sources
 - **Ground-truth anomaly labels** in the dataset for evaluating the model
 
 **Search-grounded explanations (new for the hackathon)**
@@ -307,12 +307,11 @@ Thirty days of simulated hourly satellite readings (720 rows) with these columns
 - **Source labels are domain-based heuristics.** A source labeled "research" or "news/other" is not verified beyond its domain.
 - **Query planning is template-based** per anomaly type, not LLM-generated.
 - **No formal evaluation yet.** The sample runs were checked by hand. Conflicts were not flagged in them, because the retrieved sources did not contradict each other.
-- The explain endpoint is new and experimental; the dashboard does not have an "Explain" button yet.
+- The explain endpoint and dashboard action are experimental.
 - Outputs come from an LLM reading search snippets, so they are a starting point for investigation, not an engineering conclusion.
 
 ## Future work
 
-- An "Explain" button in the React anomaly table that calls the explain endpoint
 - Additional SerpApi engines (Google News for current space-weather context, Google Scholar for papers)
 - An evaluation on the labeled anomalies (cause-category match, share of official/research sources)
 - LLM-assisted query planning and time-series forecasting of telemetry

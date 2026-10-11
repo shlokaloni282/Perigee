@@ -8,3 +8,7 @@ export const getAnomalies = () =>
   axios.get(`${API_BASE}/telemetry/anomalies/`).then((res) => res.data);
 export const getStats = () =>
   axios.get(`${API_BASE}/telemetry/stats/`).then((res) => res.data);
+export const explainAnomaly = (id) =>
+  axios
+    .get(`${API_BASE}/telemetry/anomalies/${id}/explain/`)
+    .then((res) => res.data);

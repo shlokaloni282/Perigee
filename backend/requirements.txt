@@ -17,5 +17,6 @@ serpapi
 python-dotenv
 google-genai
 dj-database-url
+psycopg[binary]
 gunicorn
 whitenoise

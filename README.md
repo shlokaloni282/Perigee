@@ -4,7 +4,7 @@
 >
 > Perigee existed before the hackathon: an ML anomaly detector, a Django REST API and a React dashboard. **New for the hackathon: the `agent/` folder**, an AI agent that explains each flagged anomaly using live evidence retrieved through **SerpApi**.
 >
-> **Demo video:** [ADD_YOUR_VIDEO_LINK_HERE](ADD_YOUR_VIDEO_LINK_HERE)
+> **Demo video:** [https://drive.google.com/file/d/1y4q0aGbf9FlsRUTdvLNzOOo-opQ-lO8A/view?usp=drive_link]
 
 <!-- Optional: add a screenshot before submitting
 ![Dashboard](docs/dashboard-screenshot.png)

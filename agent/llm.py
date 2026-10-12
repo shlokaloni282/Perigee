@@ -15,10 +15,15 @@ load_dotenv(ROOT / ".env")
 CACHE_DIR = Path(__file__).resolve().parent / "cache"
 CACHE_DIR.mkdir(exist_ok=True)
 
-PRIMARY = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+PRIMARY = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
 FALLBACKS = [m.strip() for m in os.getenv("GEMINI_FALLBACK_MODELS", "").split(",") if m.strip()]
 MODELS = [PRIMARY] + FALLBACKS
 RETRYABLE = {429, 500, 502, 503, 504}
+
+
+def _is_quota_exhaustion(error: Exception) -> bool:
+    message = str(error).lower()
+    return "quota exceeded" in message or "exceeded your current quota" in message
 
 
 def _client():
@@ -31,6 +36,7 @@ def _client():
 def _generate(client, prompt: str) -> str:
     """Call Gemini, retrying on overload and falling back to the next model if one is unavailable."""
     last = None
+    quota_exhausted = False
     for model in MODELS:
         for attempt in range(5):
             try:
@@ -45,6 +51,10 @@ def _generate(client, prompt: str) -> str:
             except errors.APIError as e:
                 last = e
                 code = getattr(e, "code", None)
+                if code == 429 and _is_quota_exhaustion(e):
+                    quota_exhausted = True
+                    print(f"[llm] {model} quota exhausted; skipping retries")
+                    break
                 if code in RETRYABLE:
                     wait = min(3 * 2 ** attempt, 30)
                     print(f"[llm] {model} busy ({code}); retrying in {wait}s...")
@@ -54,6 +64,12 @@ def _generate(client, prompt: str) -> str:
                     print(f"[llm] {model} not available; trying next model")
                     break
                 raise
+    if quota_exhausted:
+        raise RuntimeError(
+            "Gemini request quota is exhausted for the configured model(s). "
+            "Check Google AI Studio quota/billing, configure a model with available "
+            "quota, or wait for the quota reset."
+        ) from last
     raise RuntimeError(f"All Gemini attempts failed: {last}")
 
 

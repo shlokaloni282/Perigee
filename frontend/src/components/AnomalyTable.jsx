@@ -190,7 +190,11 @@ export default function AnomalyTable({ anomalies }) {
                                       ) : (
                                         source.title
                                       )}{" "}
-                                      ({source.source_type})
+                                      <span className="source-meta">
+                                        ({source.source_type}
+                                        {source.engine === "google_news" && " · Google News"}
+                                        {source.date && ` · ${source.date}`})
+                                      </span>
                                     </li>
                                   );
                                 })}

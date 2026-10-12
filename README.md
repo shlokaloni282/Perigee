@@ -41,6 +41,8 @@ Perigee has two parts that work together.
 
 **2. Explain (new for the hackathon).** For a flagged anomaly, the agent searches the web through SerpApi, filters and ranks the sources by credibility, and has an LLM read only those sources to produce a short briefing: likely causes with confidence levels, source citations, and any conflicting claims. If the evidence has a gap or conflict, the agent decides to run one more targeted search and re-analyzes.
 
+**Final demo state (this repo snapshot):** the dashboard is polished into a mission-control console with a live connection indicator, animated space backdrop, and an expanded explanation panel that shows the source provenance, confidence, conflicts, and follow-up search metadata for each anomaly.
+
 ## Features
 
 **Detection and dashboard (existing project)**
@@ -56,11 +58,13 @@ Perigee has two parts that work together.
 
 **Search-grounded explanations (new for the hackathon)**
 - **Live evidence from SerpApi** for each anomaly type, using a general query and an official-biased query
+- **Google News context** adds up to two recent news results to each briefing when relevant results are available
 - **Source credibility labels** (official, research, news/other) from deterministic domain rules
 - **Noise and relevance filtering** that drops social media and off-topic results
 - **Model-driven follow-up search** when the analysis finds a gap or conflict
 - **Grounded output:** causes with source citations and confidence levels, conflicts when sources disagree
 - **Caching and retry logic** to save search quota and survive temporary LLM overload
+- **Final demo polish:** enhanced dashboard presentation, clearer anomaly explanation UI, and richer transparency showing how many searches, sources, and follow-up actions informed each briefing
 
 ## Architecture
 
@@ -76,7 +80,9 @@ flowchart LR
   subgraph AGENT["New for the hackathon: agent/"]
     A1["Anomaly type"] --> A2["Query planning<br/>spacecraft-specific templates"]
     A2 --> A3["SerpApi Google Search<br/>general + official-biased query"]
-    A3 --> A4["Filter and rank<br/>credibility, noise, on-topic"]
+    A3 --> A3N["SerpApi Google News<br/>current context"]
+    A3 --> A4["Filter, dedupe, and rank<br/>credibility, noise, on-topic"]
+    A3N --> A4
     A4 --> A5["Gemini analysis<br/>causes, confidence, conflicts"]
     A5 -->|"gap or conflict found"| A6["Follow-up SerpApi search"]
     A6 --> A5
@@ -90,7 +96,8 @@ flowchart LR
 In plain text, the agent pipeline is:
 
 ```
-anomaly type -> query templates -> SerpApi search (general + official-biased)
+anomaly type -> query templates -> SerpApi Google Search (general + official-biased)
+             -> SerpApi Google News (supplemental current context)
              -> dedupe, drop noise, keep on-topic, label and rank sources
              -> Gemini reads ONLY those sources -> causes + confidence + conflicts
              -> (if gap/conflict) one follow-up SerpApi search -> re-analyze
@@ -99,8 +106,9 @@ anomaly type -> query templates -> SerpApi search (general + official-biased)
 
 ## How SerpApi is used
 
-- **Engine:** Google Search through the official Python SDK (`serpapi`), with `gl=in` and `hl=en`.
-- **Two queries per anomaly:** a general spacecraft-specific query, and a second query restricted to `site:nasa.gov OR site:esa.int OR site:isro.gov.in` to pull in official sources.
+- **Engines:** Google Search and Google News through the official Python SDK (`serpapi`), with `gl=in` and `hl=en`.
+- **Searches per anomaly:** a general Google Search, an official-biased Google Search, and one supplemental Google News query. If the official-biased query returns no agency results, the agent also searches NASA, ESA, and ISRO individually; a model-requested follow-up may add more.
+- **News handling:** up to two relevant Google News results are included in the LLM briefing when available. The source list identifies Google News and displays its result date when SerpApi provides one. News supplements, but does not replace, official or research sources.
 - **The explanation depends on the search results.** The LLM is instructed to use only the retrieved sources, and each cause cites source numbers. Without the SerpApi results there is nothing to analyze.
 - **The agent decides on extra searches.** The model reports whether a conflict or gap needs another search and proposes the query. The number of searches therefore depends on the evidence.
 - **Result handling uses SerpApi fields directly:** the `link` of every result drives the credibility label (official, research, or news/other), and titles and snippets feed the analysis.
@@ -111,7 +119,7 @@ anomaly type -> query templates -> SerpApi search (general + official-biased)
 | Step | File | What happens |
 |---|---|---|
 | 1. Query planning | `agent/searcher.py` | Rule-based query templates per anomaly type (`power_surge`, `orientation_drift`, `comms_dropout`, `battery_drop`, `temp_spike`) |
-| 2. Search | `agent/searcher.py` | SerpApi Google Search: one general query and one official-biased query, five results each |
+| 2. Search | `agent/searcher.py` | SerpApi Google Search: one general and one official-biased query; Google News adds current context |
 | 3. Filter and rank | `agent/searcher.py`, `agent/credibility.py` | Remove duplicates and social-media noise, keep only space-related results (relevance filter), label each source by domain rules, rank official > research > news/other |
 | 4. Analyze | `agent/llm.py`, `agent/orchestrator.py` | Gemini reads the numbered sources and returns JSON: summary, causes with source citations and confidence, conflicts, and whether a follow-up search is needed |
 | 5. Follow up | `agent/orchestrator.py` | If requested, run one more official-biased SerpApi search with the model's query, merge new on-topic sources, and re-analyze |
@@ -161,7 +169,7 @@ When the evidence is thin, the agent says so instead of guessing. For example, t
 |---|---|
 | ML / data | Python, Pandas, scikit-learn (Isolation Forest, StandardScaler), joblib |
 | Backend | Django, Django REST Framework, SQLite |
-| Frontend | React (Vite), Recharts, Axios |
+| Frontend | React 19, Vite, Recharts, Axios, Framer Motion |
 | Agent (new) | Python, SerpApi Python SDK (`serpapi`), Google Gemini (`google-genai`), `python-dotenv` |
 | Tooling | Git, VS Code |
 
@@ -224,11 +232,13 @@ Copy `.env.example` to `.env` in the **project root** and fill in the values:
 ```
 SERPAPI_API_KEY=your_serpapi_key
 GEMINI_API_KEY=your_gemini_key
-GEMINI_MODEL=gemini-3.8-flash
+GEMINI_MODEL=gemini-3.1-flash-lite
 ```
 `.env` is git-ignored. Never commit it.
 
-Optional: `GEMINI_FALLBACK_MODELS=<comma-separated model names>` lets the agent fall back to other models if the primary one is unavailable. If `gemini-3.8-flash` is not available for your account, set `GEMINI_MODEL` to a model listed in Google AI Studio.
+Optional: `GEMINI_FALLBACK_MODELS=<comma-separated model names>` lets the agent fall back to other models if the primary one is unavailable. The current default model is `gemini-3.1-flash-lite`, but you can swap to any supported Gemini model exposed by your account.
+
+> Small note: some Gemini Flash variants (for example `gemini-3.8-flash` in older configs) can be subject to strict RPM (requests-per-minute) quotas and short-lived `429`/`503` rate-limit errors. If your account is throttled, switch to a lighter model like `gemini-3.1-flash-lite` or wait for the quota window to reset before retrying.
 
 ### 4. Run the anomaly explainer (the hackathon agent)
 From the project root:
@@ -237,7 +247,7 @@ python -m agent.orchestrator power_surge
 ```
 Supported anomaly types: `power_surge`, `orientation_drift`, `comms_dropout`, `battery_drop`, `temp_spike`.
 
-The agent picks the first labeled anomaly of that type from `ml/data/telemetry.csv`, runs the search and analysis, and prints the briefing. A first run uses roughly 3 to 4 SerpApi searches and 1 to 2 Gemini calls. Results are cached in `agent/cache/`, so repeat runs are free. Delete that folder to force a fresh live run.
+The agent picks the first labeled anomaly of that type from `ml/data/telemetry.csv`, runs the search and analysis, and prints the briefing. Each briefing queries Google Search for general and official-biased results plus Google News for current context. If needed, it searches agency domains individually and may run a model-requested follow-up. Results are cached in `agent/cache/`, so repeat runs reuse cached search and analysis results. Delete that folder to force fresh live searches.
 
 ### 5. Run the dashboard and API (optional)
 Backend:
@@ -256,7 +266,7 @@ cd frontend
 npm install
 npm run dev
 ```
-The dashboard runs at `http://localhost:5173`. Start the backend first, because the dashboard fetches live data from it.
+The dashboard runs at `http://localhost:5173`. Start the backend first, because the dashboard fetches live data from it. The final demo UI includes the animated space backdrop, live telemetry connection badge, and expandable explanation panel that surfaces source provenance and follow-up-search details.
 
 ### Troubleshooting
 - **`SERPAPI_API_KEY not found` or `GEMINI_API_KEY not found`:** `.env` must be in the project root, with no quotes around the values.
@@ -287,10 +297,11 @@ Thirty days of simulated hourly satellite readings (720 rows) with these columns
 | Hackathon | SerpApi India Hackathon 2026 (Sep 1 to Oct 10, 2026, IST) |
 | Track | AI Agents |
 | Existed before the hackathon? | **Yes.** The ML detector, Django API and React dashboard existed before. The `agent/` folder and the explain endpoint were built during the hackathon, and the commit history shows the dates. |
-| SerpApi products used | Google Search through the official Python SDK (`serpapi`) |
+| SerpApi products used | Google Search and Google News through the official Python SDK (`serpapi`) |
 | Why SerpApi matters here | Every explanation is built from retrieved sources. The model is told to use only those sources, and the agent can decide to run an extra search based on what it finds. |
 | AI tools used | **Claude** for coding assistance during development. **Gemini** inside the app to analyze the retrieved sources. |
 | Demo video | See the link at the top of this README. It shows the project running locally. |
+| Final demo polish | The dashboard was refined for the demo with a space-themed mission-control aesthetic, real-time connection status, and a richer explanation panel for anomaly investigations. |
 | Secrets | No API keys or personal data are committed. Keys live in a git-ignored `.env`. |
 
 **How the project maps to the judging criteria**
@@ -314,7 +325,7 @@ Thirty days of simulated hourly satellite readings (720 rows) with these columns
 
 ## Future work
 
-- Additional SerpApi engines (Google News for current space-weather context, Google Scholar for papers)
+- Additional SerpApi engines (Google Scholar for research papers)
 - An evaluation on the labeled anomalies (cause-category match, share of official/research sources)
 - LLM-assisted query planning and time-series forecasting of telemetry
 - Real-time streaming data and deployment (Render/Railway for the backend, Vercel for the frontend)

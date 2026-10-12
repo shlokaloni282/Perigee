@@ -1,6 +1,8 @@
 import hashlib
 import json
 import os
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import urlparse
 import re
@@ -50,6 +52,9 @@ SPACE_RE = re.compile(
     r"\b(satellite|spacecraft|space|orbit|orbital|telemetry|nasa|esa|isro|cubesat|smallsat|aerospace)\b",
     re.I,
 )
+_STATS_LOCK = threading.Lock()
+
+
 def new_stats() -> dict:
     """Counters for one briefing: queries run, live SerpApi calls, results seen."""
     return {"queries": 0, "live_searches": 0, "retrieved": 0}
@@ -57,7 +62,8 @@ def new_stats() -> dict:
 
 def _bump(stats, key: str, n: int = 1) -> None:
     if stats is not None:
-        stats[key] = stats.get(key, 0) + n
+        with _STATS_LOCK:
+            stats[key] = stats.get(key, 0) + n
 
 
 def _on_topic(item) -> bool:
@@ -138,7 +144,7 @@ def official_search(query: str, limit: int = 5, stats=None, per_domain: int = PE
 
 
 def gather(anomaly_type: str, limit: int = 5, stats=None):
-    """General query + official-biased query, deduped, noise-filtered, ranked."""
+    """Gather Google, official-biased, and current Google News results."""
     qs = queries_for(anomaly_type)
     topic_query = qs[1] if len(qs) > 1 else qs[0]
     seen, out = set(), []
@@ -151,8 +157,19 @@ def gather(anomaly_type: str, limit: int = 5, stats=None):
             seen.add(link)
             out.append(item)
 
-    add(search(qs[0], limit=limit, stats=stats))
-    add(official_search(topic_query, limit=limit, stats=stats))
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        general_search = executor.submit(search, qs[0], limit=limit, stats=stats)
+        official_results = executor.submit(
+            official_search, topic_query, limit=limit, stats=stats
+        )
+        news_search = executor.submit(
+            search, topic_query, engine="google_news", limit=limit, stats=stats
+        )
+
+        add(general_search.result())
+        add(official_results.result())
+        add(news_search.result())
+
     return sorted(out, key=lambda x: RANK[x["source_type"]])
 
 

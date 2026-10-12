@@ -5,6 +5,7 @@ import TelemetryLineChart from "./components/TelemetryLineChart";
 import AnomalyBarChart from "./components/AnomalyBarChart";
 import AnomalyTable from "./components/AnomalyTable";
 import OrbitSimulation from "./components/OrbitSimulation";
+import SpaceBackdrop from "./components/SpaceBackdrop";
 import "./App.css";
 
 function App() {
@@ -39,7 +40,9 @@ function App() {
   }, [refreshKey]);
 
   return (
-    <main className="dashboard-shell">
+    <>
+      <SpaceBackdrop />
+      <main className="dashboard-shell">
       <header className="topbar">
         <a className="brand" href="/" aria-label="Perigee dashboard home">
           <span className="brand-mark" aria-hidden="true">
@@ -145,7 +148,8 @@ function App() {
           </footer>
         </>
       )}
-    </main>
+      </main>
+    </>
   );
 }
 

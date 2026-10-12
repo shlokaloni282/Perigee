@@ -35,7 +35,12 @@ def _format_sources(sources):
     lines = []
     for i, s in enumerate(sources):
         snippet = (s.get("snippet") or "")[:300]
-        lines.append(f"[{i}] ({s['source_type']}) {s['title']} - {snippet}")
+        engine = s.get("engine", "google")
+        date = f", date: {s['date']}" if s.get("date") else ""
+        lines.append(
+            f"[{i}] ({s['source_type']}, {engine}{date}) "
+            f"{s['title']} - {snippet}"
+        )
     return "\n".join(lines)
 
 
@@ -50,7 +55,13 @@ def _analyze(anomaly, sources):
 def explain(anomaly: dict) -> dict:
     """Search, analyze, and (if the model asks) run one follow-up search."""
     stats = new_stats()
-    sources = gather(anomaly["anomaly_type"], stats=stats)[:MAX_SOURCES]
+    gathered = gather(anomaly["anomaly_type"], stats=stats)
+    news_sources = [source for source in gathered if source["engine"] == "google_news"][:2]
+    other_sources = [source for source in gathered if source["engine"] != "google_news"]
+    sources = sorted(
+        other_sources[: MAX_SOURCES - len(news_sources)] + news_sources,
+        key=lambda source: RANK[source["source_type"]],
+    )
     result = _analyze(anomaly, sources)
 
     followup_used = False

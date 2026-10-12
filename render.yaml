@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: perigee-api
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt && cd backend && python manage.py collectstatic --noinput
+    startCommand: cd backend && python manage.py migrate && python manage.py load_telemetry && gunicorn perigee_backend.wsgi:application --bind 0.0.0.0:$PORT
+    healthCheckPath: /api/telemetry/stats/
+    envVars:
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_HOSTS
+        value: perigee-api.onrender.com
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://perigee-dashboard.onrender.com
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://perigee-api.onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: perigee-db
+          property: connectionString
+      - key: SERPAPI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.1-flash-lite
+
+  - type: web
+    name: perigee-dashboard
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://perigee-api.onrender.com/api
+
+databases:
+  - name: perigee-db
+    plan: free
+    databaseName: perigee
+    user: perigee_user

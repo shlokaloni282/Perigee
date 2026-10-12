@@ -21,11 +21,12 @@
 8. [Tech stack](#tech-stack)
 9. [Project structure](#project-structure)
 10. [Full setup instructions](#full-setup-instructions)
-11. [API endpoints](#api-endpoints)
-12. [Dataset](#dataset)
-13. [Hackathon submission details](#hackathon-submission-details)
-14. [Honest limitations](#honest-limitations)
-15. [Future work](#future-work)
+11. [Deploy on Render](#deploy-on-render)
+12. [API endpoints](#api-endpoints)
+13. [Dataset](#dataset)
+14. [Hackathon submission details](#hackathon-submission-details)
+15. [Honest limitations](#honest-limitations)
+16. [Future work](#future-work)
 
 ---
 
@@ -274,6 +275,18 @@ The dashboard runs at `http://localhost:5173`. Start the backend first, because 
 - **Gemini 404 "model not found":** set `GEMINI_MODEL` in `.env` to a model available to your account.
 - **`No module named 'agent'`:** run the command from the project root, not from inside `agent/` or `backend/`.
 - **Duplicate readings (counts doubled):** delete `backend/db.sqlite3`, then re-run `migrate` and `load_telemetry`.
+
+## Deploy on Render
+
+The repository includes a Render Blueprint in `render.yaml` for a Django API, React static site, and PostgreSQL database. It is intended for a temporary demo using Render's free plans; the free Postgres database expires 30 days after creation and its data is deleted after the additional 14-day grace period unless upgraded. Free web services can spin down when idle, so the first request may take about a minute.
+
+1. Push the project to GitHub, then in the [Render Dashboard](https://dashboard.render.com/) choose **New > Blueprint** and connect this repository's `main` branch.
+2. Review the Blueprint resources and select the free Postgres plan. During setup, enter `SERPAPI_API_KEY` and `GEMINI_API_KEY` in Render's environment-variable prompt. Never add these keys to `render.yaml` or the frontend.
+3. Deploy the Blueprint. It builds the frontend with the deployed API URL, runs database migrations, loads the sample telemetry only when the database is empty, and starts the Django API with Gunicorn.
+4. Once both services are live, open `https://perigee-dashboard.onrender.com` and confirm the API health endpoint responds at `https://perigee-api.onrender.com/api/telemetry/stats/`.
+5. If either service receives a different Render hostname, update `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS`, and `VITE_API_BASE_URL` in the Blueprint to match, then sync and redeploy it.
+
+The free PostgreSQL instance is suitable for a short-lived demo, not long-term storage. Upgrade it before the expiry deadline to retain deployed data.
 
 ## API endpoints
 

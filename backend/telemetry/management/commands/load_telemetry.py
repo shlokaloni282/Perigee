@@ -18,6 +18,10 @@ class Command(BaseCommand):
     help = "Load telemetry.csv into the database and run anomaly detection on it"
 
     def handle(self, *args, **kwargs):
+        if TelemetryReading.objects.exists():
+            self.stdout.write("Telemetry data already exists; skipping initial load.")
+            return
+
         df = pd.read_csv(CSV_PATH)
         saved = joblib.load(MODEL_PATH)
         model = saved["model"]

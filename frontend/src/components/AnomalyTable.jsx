@@ -44,37 +44,43 @@ export default function AnomalyTable({ anomalies }) {
   }
 
   return (
-    <div
-      style={{
-        background: "#1e1e2e",
-        padding: "1rem",
-        borderRadius: "8px",
-        color: "#fff",
-      }}
-    >
-      <h3>Recent Anomalies</h3>
-      <table style={{ width: "100%", fontSize: "0.85rem" }}>
+    <section className="panel anomaly-table-panel">
+      <div className="panel-heading">
+        <div>
+          <p className="eyebrow">REVIEW QUEUE / LATEST EVENTS</p>
+          <h2>Recent anomalies</h2>
+        </div>
+        <span className="chart-period">SHOWING {recent.length} OF {anomalies.length}</span>
+      </div>
+      <div className="table-scroll">
+      <table className="anomaly-table">
         <thead>
           <tr style={{ textAlign: "left", opacity: 0.7 }}>
-            <th>Timestamp</th>
-            <th>Type</th>
-            <th>Temp (°C)</th>
-            <th>Battery (%)</th>
-            <th>Score</th>
-            <th>Action</th>
+            <th scope="col">Timestamp</th>
+            <th scope="col">Type</th>
+            <th scope="col">Temp (°C)</th>
+            <th scope="col">Battery (%)</th>
+            <th scope="col">Score</th>
+            <th scope="col">Action</th>
           </tr>
         </thead>
         <tbody>
+          {recent.length === 0 && (
+            <tr>
+              <td className="empty-table" colSpan="6">No anomalies to review.</td>
+            </tr>
+          )}
           {recent.map((a) => (
             <Fragment key={a.id}>
               <tr>
-                <td>{new Date(a.timestamp).toLocaleString()}</td>
-                <td>{a.anomaly_type || "—"}</td>
-                <td>{a.temperature_c?.toFixed(1)}</td>
-                <td>{a.battery_pct?.toFixed(1)}</td>
-                <td>{a.anomaly_score?.toFixed(3)}</td>
+                <td className="timestamp-cell">{new Date(a.timestamp).toLocaleString()}</td>
+                <td><span className="anomaly-type">{a.anomaly_type || "unknown"}</span></td>
+                <td>{a.temperature_c?.toFixed(1) ?? "—"}</td>
+                <td>{a.battery_pct?.toFixed(1) ?? "—"}</td>
+                <td className="score-cell">{a.anomaly_score?.toFixed(3) ?? "—"}</td>
                 <td>
                   <button
+                    className="explain-button"
                     type="button"
                     onClick={() => handleExplain(a)}
                     disabled={loading}
@@ -87,14 +93,7 @@ export default function AnomalyTable({ anomalies }) {
               {expandedId === a.id && (
                 <tr>
                   <td colSpan="6">
-                    <div
-                      style={{
-                        padding: "0.75rem",
-                        background: "#29293b",
-                        borderRadius: "6px",
-                        textAlign: "left",
-                      }}
-                    >
+                    <div className="explanation-panel">
                       {loading && <p>Loading explanation…</p>}
                       {error && (
                         <p role="alert" style={{ color: "#ff9b9b" }}>
@@ -106,9 +105,33 @@ export default function AnomalyTable({ anomalies }) {
                           <h4>Anomaly Explanation</h4>
                           <p>{explanation.summary || "No summary provided."}</p>
 
-                          {explanation.causes?.length > 0 && (
-                            <>
-                              <h4>Possible causes</h4>
+                        {/* Provenance: how much SerpApi work produced this briefing. */}
+                        <div className="provenance-summary">
+                          {explanation.stats && (
+                            <span>
+                              {explanation.stats.live_searches} new SerpApi
+                              searches ({explanation.stats.searches} queries) ·{" "}
+                              {explanation.stats.sources_retrieved} results
+                              retrieved · {explanation.stats.sources_kept} kept
+                              after filtering ·{" "}
+                            </span>
+                          )}
+                          {explanation.source_mix && (
+                            <span>
+                              {explanation.source_mix.official} official /{" "}
+                              {explanation.source_mix.research} research /{" "}
+                              {explanation.source_mix["news/other"]} news-other ·{" "}
+                            </span>
+                          )}
+                          Follow-up search:{" "}
+                          {explanation.followup_used
+                            ? `yes — ${explanation.followup_query}`
+                            : "not needed"}
+                        </div>
+
+                        {explanation.causes?.length > 0 && (
+                          <>
+                            <h4>Possible causes</h4>
                               <ul>
                                 {explanation.causes.map((cause, index) => (
                                   <li key={`${cause.cause}-${index}`}>
@@ -147,12 +170,6 @@ export default function AnomalyTable({ anomalies }) {
                             </>
                           )}
 
-                          {explanation.followup_used && (
-                            <p>
-                              Follow-up search: {explanation.followup_query}
-                            </p>
-                          )}
-
                           {explanation.sources?.length > 0 && (
                             <>
                               <h4>Sources</h4>
@@ -166,7 +183,7 @@ export default function AnomalyTable({ anomalies }) {
                                           href={href}
                                           target="_blank"
                                           rel="noreferrer"
-                                          style={{ color: "#a9c7ff" }}
+                                          className="source-link"
                                         >
                                           {source.title}
                                         </a>
@@ -190,6 +207,7 @@ export default function AnomalyTable({ anomalies }) {
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </section>
   );
 }

@@ -40,16 +40,24 @@ TEMPLATES = {
     ],
 }
 
-OFFICIAL_BIAS = "(site:nasa.gov OR site:esa.int OR site:isro.gov.in)"
-NOISE = (
-    "facebook.com", "instagram.com", "pinterest.com", "quora.com",
-    "reddit.com", "tiktok.com", "x.com", "twitter.com",
-)
+# The three agencies we treat as primary sources. Each is queried on its own if
+# the combined "site:a OR site:b OR site:c" query comes back without one.
+OFFICIAL_DOMAINS = ("nasa.gov", "esa.int", "isro.gov.in")
+OFFICIAL_BIAS = "(" + " OR ".join(f"site:{d}" for d in OFFICIAL_DOMAINS) + ")"
+PER_DOMAIN_LIMIT = 3
 RANK = {"official": 0, "research": 1, "news/other": 2}
 SPACE_RE = re.compile(
     r"\b(satellite|spacecraft|space|orbit|orbital|telemetry|nasa|esa|isro|cubesat|smallsat|aerospace)\b",
     re.I,
 )
+def new_stats() -> dict:
+    """Counters for one briefing: queries run, live SerpApi calls, results seen."""
+    return {"queries": 0, "live_searches": 0, "retrieved": 0}
+
+
+def _bump(stats, key: str, n: int = 1) -> None:
+    if stats is not None:
+        stats[key] = stats.get(key, 0) + n
 
 
 def _on_topic(item) -> bool:
@@ -77,12 +85,15 @@ def _cache_path(engine: str, query: str) -> Path:
     return CACHE_DIR / f"{digest}.json"
 
 
+NOISE = set()
+
+
 def _is_noise(url: str) -> bool:
     host = urlparse(url or "").netloc.lower()
     return any(host == d or host.endswith("." + d) for d in NOISE)
 
 
-def search(query: str, engine: str = "google", limit: int = 5):
+def search(query: str, engine: str = "google", limit: int = 5, stats=None):
     """Run one SerpApi search (cached on disk) and return source-labelled results."""
     path = _cache_path(engine, query)
     if path.exists():
@@ -91,10 +102,15 @@ def search(query: str, engine: str = "google", limit: int = 5):
         params = {"engine": engine, "q": query, "gl": "in", "hl": "en"}
         data = dict(_client().search(params))
         path.write_text(json.dumps(data), encoding="utf-8")
+        _bump(stats, "live_searches")  # only a cache miss spends SerpApi quota
 
+    _bump(stats, "queries")
     key = "news_results" if engine == "google_news" else "organic_results"
+    raw = data.get(key, [])[:limit]
+    _bump(stats, "retrieved", len(raw))
+
     results = []
-    for r in data.get(key, [])[:limit]:
+    for r in raw:
         link = r.get("link", "")
         results.append({
             "title": r.get("title"),
@@ -107,22 +123,42 @@ def search(query: str, engine: str = "google", limit: int = 5):
         })
     return results
 
+def official_search(query: str, limit: int = 5, stats=None, per_domain: int = PER_DOMAIN_LIMIT):
+    """Search with an official bias, escalating to one query per agency domain.
 
-def gather(anomaly_type: str, limit: int = 5):
+    Google frequently ignores long `site:a OR site:b OR site:c` chains, so if the
+    biased query returns no official page we ask nasa.gov, esa.int and
+    isro.gov.in separately. The extra searches are only spent when needed.
+    """
+    items = search(f"{query} {OFFICIAL_BIAS}", limit=limit, stats=stats)
+    if not any(i["source_type"] == "official" for i in items):
+        for domain in OFFICIAL_DOMAINS:
+            items += search(f"{query} site:{domain}", limit=per_domain, stats=stats)
+    return items
+
+
+def gather(anomaly_type: str, limit: int = 5, stats=None):
     """General query + official-biased query, deduped, noise-filtered, ranked."""
     qs = queries_for(anomaly_type)
-    queries = [qs[0], f"{qs[1] if len(qs) > 1 else qs[0]} {OFFICIAL_BIAS}"]
+    topic_query = qs[1] if len(qs) > 1 else qs[0]
     seen, out = set(), []
-    for q in queries:
-        for item in search(q, limit=limit):
-            if item["link"] in seen or _is_noise(item["link"]) or not _on_topic(item):
+
+    def add(items):
+        for item in items:
+            link = item["link"]
+            if link in seen or _is_noise(link) or not _on_topic(item):
                 continue
-            seen.add(item["link"])
+            seen.add(link)
             out.append(item)
+
+    add(search(qs[0], limit=limit, stats=stats))
+    add(official_search(topic_query, limit=limit, stats=stats))
     return sorted(out, key=lambda x: RANK[x["source_type"]])
 
 
 if __name__ == "__main__":
-    for item in gather("battery_drop"):
+    stats = new_stats()
+    for item in gather("battery_drop", stats=stats):
+        print(f"queries: {stats['queries']} live SerpApi calls: {stats['live_searches']}")
         print(f"[{item['source_type']}] {item['title']}")
         print(f"   {item['link']}\n")

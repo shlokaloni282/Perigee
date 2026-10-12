@@ -1,32 +1,40 @@
+const metrics = [
+  { label: "Telemetry readings", key: "total_readings", note: "ALL RECORDED" },
+  { label: "Anomalies detected", key: "anomaly_count", note: "NEEDS REVIEW" },
+];
+
 export default function StatsCards({ stats }) {
   if (!stats) return null;
+
   const cards = [
-    { label: "Total Readings", value: stats.total_readings },
-    { label: "Anomalies Detected", value: stats.anomaly_count },
+    ...metrics.map((metric, index) => ({
+      ...metric,
+      value: stats[metric.key]?.toLocaleString() ?? "—",
+      index: `0${index + 1}`,
+    })),
     {
-      label: "Anomaly Rate",
-      value: `${(stats.anomaly_rate * 100).toFixed(2)}%`,
+      label: "Anomaly rate",
+      value:
+        Number.isFinite(stats.anomaly_rate)
+          ? `${(stats.anomaly_rate * 100).toFixed(2)}%`
+          : "—",
+      note: "OF TOTAL READINGS",
+      index: "03",
     },
   ];
+
   return (
-    <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem" }}>
-      {cards.map((c) => (
-        <div
-          key={c.label}
-          style={{
-            flex: 1,
-            padding: "1rem",
-            background: "#1e1e2e",
-            borderRadius: "8px",
-            color: "#fff",
-          }}
-        >
-          <div style={{ fontSize: "0.85rem", opacity: 0.7 }}>{c.label}</div>
-          <div style={{ fontSize: "1.8rem", fontWeight: "bold" }}>
-            {c.value}
+    <section className="stats-grid" aria-label="Telemetry summary">
+      {cards.map((card, index) => (
+        <article className={`stat-card stat-card-${index + 1}`} key={card.label}>
+          <div className="stat-card-top">
+            <span className="stat-card-label">{card.label}</span>
+            <span className="stat-card-index">{card.index}</span>
           </div>
-        </div>
+          <strong className="stat-card-value">{card.value}</strong>
+          <span className="stat-card-note">{card.note}</span>
+        </article>
       ))}
-    </div>
+    </section>
   );
 }

@@ -48,6 +48,7 @@ Perigee has two parts that work together.
 - **REST API** built with Django REST Framework, exposing telemetry data, filtered anomalies and summary statistics
 - **Interactive dashboard** built with React and Recharts:
   - Live stats cards (total readings, anomaly count, anomaly rate)
+  - An illustrative, interactive 2D orbit view for selecting recent anomaly events (not real position data)
   - Multi-metric telemetry trend line chart
   - Anomaly breakdown by type (bar chart)
   - A table of the most recent flagged anomalies with an **Explain** action that displays an AI-generated briefing, possible causes, and sources
@@ -303,6 +304,7 @@ Thirty days of simulated hourly satellite readings (720 rows) with these columns
 ## Honest limitations
 
 - **The telemetry is simulated.** The agent finds real-world references for each anomaly *type*. It is not monitoring a real satellite, and the timestamps are not tied to real events.
+- **The orbit view is illustrative.** Event markers are arranged for visualization and do not represent measured spacecraft coordinates.
 - **Evidence quality varies by anomaly type.** Some types (for example `battery_drop`) return thin evidence. The agent then reports low confidence instead of guessing.
 - **Source labels are domain-based heuristics.** A source labeled "research" or "news/other" is not verified beyond its domain.
 - **Query planning is template-based** per anomaly type, not LLM-generated.

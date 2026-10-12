@@ -1,8 +1,9 @@
 import json
 from pathlib import Path
+from collections import Counter
 
 from .llm import ask_json
-from .searcher import OFFICIAL_BIAS, RANK, _is_noise, _on_topic, gather, search
+from .searcher import OFFICIAL_BIAS, RANK, _is_noise, _on_topic, gather, search,  new_stats, official_search
 MAX_SOURCES = 8
 
 PROMPT = """You are an assistant helping a satellite operator understand an anomaly.
@@ -48,7 +49,8 @@ def _analyze(anomaly, sources):
 
 def explain(anomaly: dict) -> dict:
     """Search, analyze, and (if the model asks) run one follow-up search."""
-    sources = gather(anomaly["anomaly_type"])[:MAX_SOURCES]
+    stats = new_stats()
+    sources = gather(anomaly["anomaly_type"], stats=stats)[:MAX_SOURCES]
     result = _analyze(anomaly, sources)
 
     followup_used = False
@@ -56,13 +58,15 @@ def explain(anomaly: dict) -> dict:
     if result.get("needs_followup") and query:
         known = {s["link"] for s in sources}
         extra = [
-            s for s in search(f"{query} {OFFICIAL_BIAS}", limit=5)
-            if s["link"] not in known and not _is_noise(s["link"]) and _on_topic(s)        ]
+            s for s in official_search(query, limit=5, stats=stats)
+            if s["link"] not in known and not _is_noise(s["link"]) and _on_topic(s)
+        ]
         if extra:
             sources = sorted(sources + extra, key=lambda x: RANK[x["source_type"]])[: MAX_SOURCES + 3]
             result = _analyze(anomaly, sources)
             followup_used = True
 
+    mix = Counter(s["source_type"] for s in sources)
     return {
         "anomaly": anomaly,
         "summary": result.get("summary", ""),
@@ -71,7 +75,20 @@ def explain(anomaly: dict) -> dict:
         "followup_used": followup_used,
         "followup_query": query if followup_used else "",
         "sources": sources,
+        # Transparency for the briefing UI: how much SerpApi work this answer took.
+        "stats": {
+            "searches": stats["queries"],
+            "live_searches": stats["live_searches"],
+            "sources_retrieved": stats["retrieved"],
+            "sources_kept": len(sources),
+        },
+        "source_mix": {
+            "official": mix.get("official", 0),
+            "research": mix.get("research", 0),
+            "news/other": mix.get("news/other", 0),
+        },
     }
+
 
 
 if __name__ == "__main__":

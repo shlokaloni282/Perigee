@@ -2,6 +2,7 @@ services:
   - type: web
     name: perigee-api
     runtime: python
+    plan: free
     buildCommand: pip install -r backend/requirements.txt && cd backend && python manage.py collectstatic --noinput
     startCommand: cd backend && python manage.py migrate && python manage.py load_telemetry && gunicorn perigee_backend.wsgi:application --bind 0.0.0.0:$PORT
     healthCheckPath: /api/telemetry/stats/

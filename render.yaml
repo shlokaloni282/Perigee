@@ -12,11 +12,11 @@ services:
       - key: DJANGO_SECRET_KEY
         generateValue: true
       - key: ALLOWED_HOSTS
-        value: perigee-api.onrender.com
+        value: perigee-api-tcfh.onrender.com
       - key: CORS_ALLOWED_ORIGINS
         value: https://perigee-dashboard.onrender.com
       - key: CSRF_TRUSTED_ORIGINS
-        value: https://perigee-api.onrender.com
+        value: https://perigee-api-tcfh.onrender.com
       - key: DATABASE_URL
         fromDatabase:
           name: perigee-db
@@ -36,7 +36,7 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_BASE_URL
-        value: https://perigee-api.onrender.com/api
+        value: https://perigee-api-tcfh.onrender.com/api
 
 databases:
   - name: perigee-db

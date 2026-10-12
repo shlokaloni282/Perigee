@@ -283,7 +283,7 @@ The repository includes a Render Blueprint in `render.yaml` for a Django API, Re
 1. Push the project to GitHub, then in the [Render Dashboard](https://dashboard.render.com/) choose **New > Blueprint** and connect this repository's `main` branch.
 2. Review the Blueprint resources and select the free Postgres plan. During setup, enter `SERPAPI_API_KEY` and `GEMINI_API_KEY` in Render's environment-variable prompt. Never add these keys to `render.yaml` or the frontend.
 3. Deploy the Blueprint. It builds the frontend with the deployed API URL, runs database migrations, loads the sample telemetry only when the database is empty, and starts the Django API with Gunicorn.
-4. Once both services are live, open `https://perigee-dashboard.onrender.com` and confirm the API health endpoint responds at `https://perigee-api.onrender.com/api/telemetry/stats/`.
+4. Once both services are live, open the dashboard URL shown in Render and confirm the API health endpoint responds at the API URL shown in Render plus `/api/telemetry/stats/`.
 5. If either service receives a different Render hostname, update `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS`, and `VITE_API_BASE_URL` in the Blueprint to match, then sync and redeploy it.
 
 The free PostgreSQL instance is suitable for a short-lived demo, not long-term storage. Upgrade it before the expiry deadline to retain deployed data.

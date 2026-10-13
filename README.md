@@ -3,6 +3,8 @@
 > **SerpApi India Hackathon 2026 | Track: AI Agents**
 >
 > Perigee existed before the hackathon: an ML anomaly detector, a Django REST API and a React dashboard. **New for the hackathon: the `agent/` folder**, an AI agent that explains each flagged anomaly using live evidence retrieved through **SerpApi**.
+>
+>
 > Checkout the proj here! [https://perigee-dashboard.onrender.com/]
 > **Demo video:** [https://drive.google.com/file/d/1y4q0aGbf9FlsRUTdvLNzOOo-opQ-lO8A/view?usp=drive_link]
 
